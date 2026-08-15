@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'movie_info_page.dart';
 
 import '../api.dart';
 
@@ -10,9 +12,11 @@ class MoviesPage extends StatefulWidget {
 class _MoviesPageState extends State<MoviesPage> {
   String searchQuery = '';
   List<dynamic> movies = [];
+  List<dynamic> displayedMovies = [];
   bool isLoading = true;
   String? errorMessage;
-  String posterBaseUrl = 'https://image.tmdb.org/t/p/w500';
+  final String posterBaseUrl = 'https://image.tmdb.org/t/p/w500';
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -20,12 +24,22 @@ class _MoviesPageState extends State<MoviesPage> {
     loadMovies();
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   Future<void> loadMovies() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
     try {
       final fetchedMovies = await getPopularMovies();
       setState(() {
         movies = fetchedMovies;
-        print(movies);
+        displayedMovies = fetchedMovies;
         isLoading = false;
       });
     } catch (e) {
@@ -36,80 +50,48 @@ class _MoviesPageState extends State<MoviesPage> {
     }
   }
 
-  // final List<Map<String, dynamic>> movies = [
-  //   {
-  //     'title': 'Inception',
-  //     'year': 2010,
-  //     'rating': 8.8,
-  //     'poster': 'https://picsum.photos/id/1011/300/450',
-  //   },
-  //   {
-  //     'title': 'Interstellar',
-  //     'year': 2014,
-  //     'rating': 8.6,
-  //     'poster': 'https://picsum.photos/id/1015/300/450',
-  //   },
-  //   {
-  //     'title': 'The Dark Knight',
-  //     'year': 2008,
-  //     'rating': 9.0,
-  //     'poster': 'https://picsum.photos/id/1016/300/450',
-  //   },
-  //   {
-  //     'title': 'Avengers: Endgame',
-  //     'year': 2019,
-  //     'rating': 8.4,
-  //     'poster': 'https://picsum.photos/id/1018/300/450',
-  //   },
-  //   {
-  //     'title': 'Joker',
-  //     'year': 2019,
-  //     'rating': 8.4,
-  //     'poster': 'https://picsum.photos/id/1025/300/450',
-  //   },
-  //   {
-  //     'title': 'Parasite',
-  //     'year': 2019,
-  //     'rating': 8.5,
-  //     'poster': 'https://picsum.photos/id/1035/300/450',
-  //   },
-  //   {
-  //     'title': 'The Matrix',
-  //     'year': 1999,
-  //     'rating': 8.7,
-  //     'poster': 'https://picsum.photos/id/1038/300/450',
-  //   },
-  //   {
-  //     'title': 'Fight Club',
-  //     'year': 1999,
-  //     'rating': 8.8,
-  //     'poster': 'https://picsum.photos/id/1043/300/450',
-  //   },
-  //   {
-  //     'title': 'Pulp Fiction',
-  //     'year': 1994,
-  //     'rating': 8.9,
-  //     'poster': 'https://picsum.photos/id/1050/300/450',
-  //   },
-  //   {
-  //     'title': 'Forrest Gump',
-  //     'year': 1994,
-  //     'rating': 8.8,
-  //     'poster': 'https://picsum.photos/id/1060/300/450',
-  //   },
-  // ];
+  Future<void> runSearch(String query) async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+    try {
+      final results = await getSearchedMovies(query);
+      setState(() {
+        displayedMovies = results;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
+  }
 
-  List<dynamic> get filteredMovies {
+  void onSearchChanged(String value) {
+    setState(() {
+      searchQuery = value;
+    });
+
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      if (value.isEmpty) {
+        setState(() {
+          displayedMovies = movies; // back to popular movies
+          errorMessage = null;
+        });
+        return;
+      }
+      runSearch(value);
+    });
+  }
+
+  void retry() {
     if (searchQuery.isEmpty) {
-      return movies;
+      loadMovies();
     } else {
-      return movies
-          .where(
-            (movie) => movie['title'].toLowerCase().contains(
-              searchQuery.toLowerCase(),
-            ),
-          )
-          .toList();
+      runSearch(searchQuery);
     }
   }
 
@@ -129,19 +111,40 @@ class _MoviesPageState extends State<MoviesPage> {
               filled: true,
               fillColor: Colors.grey[200],
             ),
-            onChanged: (value) {
-              setState(() {
-                searchQuery = value;
-              });
-            },
+            onChanged: onSearchChanged,
           ),
         ),
-
         Expanded(
           child: isLoading
-              ? Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator())
               : errorMessage != null
-              ? Center(child: Text(errorMessage!))
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(
+                          "An error occurred. Please retry.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey[700]),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: retry,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
               : GridView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -150,37 +153,56 @@ class _MoviesPageState extends State<MoviesPage> {
                     mainAxisSpacing: 12,
                     childAspectRatio: 0.65,
                   ),
-                  itemCount: filteredMovies.length,
+                  itemCount: displayedMovies.length,
                   itemBuilder: (context, index) {
-                    final movie = filteredMovies[index];
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
-                              posterBaseUrl + movie['poster_path'],
-                              fit: BoxFit.cover,
-                              width: double.infinity,
+                    final movie = displayedMovies[index];
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MovieInfoPage(movie: movie),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: movie['poster_path'] != null
+                                  ? Image.network(
+                                      posterBaseUrl + movie['poster_path'],
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                    )
+                                  : Container(
+                                      color: Colors.grey[300],
+                                      child: const Icon(
+                                        Icons.movie,
+                                        size: 40,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          movie['title'],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          '${movie['release_date']} • ⭐ ${movie['vote_count']}',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 13,
+                          const SizedBox(height: 6),
+                          Text(
+                            movie['title'] ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                        ),
-                      ],
+                          Text(
+                            '${movie['release_date'] ?? ''} • ⭐ ${movie['vote_average'] ?? '-'}',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),

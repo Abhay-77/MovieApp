@@ -20,3 +20,21 @@ Future<List<dynamic>> getPopularMovies() async {
     throw Exception('Failed to load movies');
   }
 }
+Future<List<dynamic>> getSearchedMovies(String query) async {
+  final response = await http.get(
+    Uri.parse(
+      'https://api.themoviedb.org/3/search/movie?query=${Uri.encodeQueryComponent(query)}',
+    ),
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+  );
+
+  if (response.statusCode == 200) {
+    final data = json.decode(response.body);
+    return data['results'];
+  } else {
+    throw Exception('Failed to load movies');
+  }
+}

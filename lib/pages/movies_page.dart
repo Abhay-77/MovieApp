@@ -12,6 +12,7 @@ class _MoviesPageState extends State<MoviesPage> {
   List<dynamic> movies = [];
   bool isLoading = true;
   String? errorMessage;
+  String posterBaseUrl = 'https://image.tmdb.org/t/p/w500';
 
   @override
   void initState() {
@@ -159,7 +160,7 @@ class _MoviesPageState extends State<MoviesPage> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: Image.network(
-                              movie['poster'],
+                              posterBaseUrl + movie['poster_path'],
                               fit: BoxFit.cover,
                               width: double.infinity,
                             ),
@@ -173,7 +174,7 @@ class _MoviesPageState extends State<MoviesPage> {
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          '${movie['year']} • ⭐ ${movie['rating']}',
+                          '${movie['release_date']} • ⭐ ${movie['vote_count']}',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 13,

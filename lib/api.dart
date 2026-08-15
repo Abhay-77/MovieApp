@@ -2,9 +2,9 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 
-Future<List<dynamic>> getPopularMovies() async {
-  final token = dotenv.env['TMDB_API_TOKEN'];
+final token = dotenv.env['TMDB_API_TOKEN'];
 
+Future<List<dynamic>> getPopularMovies() async {
   final response = await http.get(
     Uri.parse('https://api.themoviedb.org/3/movie/popular'),
     headers: {
@@ -15,7 +15,7 @@ Future<List<dynamic>> getPopularMovies() async {
 
   if (response.statusCode == 200) {
     final data = json.decode(response.body);
-    return data['results']; // list of movies
+    return data['results'];
   } else {
     throw Exception('Failed to load movies');
   }

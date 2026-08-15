@@ -6,7 +6,7 @@ import 'settings/help_and_support_page.dart';
 import 'settings/notifications_page.dart';
 
 class ProfilePage extends StatelessWidget {
-  List settings = [
+  final List settings = [
     {'title': 'Account', 'icon': Icons.settings, 'page': AccountPage()},
     {
       'title': 'Notifications',

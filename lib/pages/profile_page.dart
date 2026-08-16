@@ -52,7 +52,6 @@ class ProfilePage extends StatelessWidget {
           'john.doe@example.com',
           style: TextStyle(fontSize: 16, color: Colors.grey[600]),
         ),
-        ElevatedButton(onPressed: () {}, child: Text('Edit Profile')),
         SizedBox(height: 30),
         Expanded(
           child: ListView.builder(

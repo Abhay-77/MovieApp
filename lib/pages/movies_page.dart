@@ -31,18 +31,21 @@ class _MoviesPageState extends State<MoviesPage> {
   }
 
   Future<void> loadMovies() async {
+    if (!mounted) return;
     setState(() {
       isLoading = true;
       errorMessage = null;
     });
     try {
       final fetchedMovies = await getPopularMovies();
+      if (!mounted) return;
       setState(() {
         movies = fetchedMovies;
         displayedMovies = fetchedMovies;
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         errorMessage = e.toString();
         isLoading = false;
@@ -51,17 +54,20 @@ class _MoviesPageState extends State<MoviesPage> {
   }
 
   Future<void> runSearch(String query) async {
+    if (!mounted) return;
     setState(() {
       isLoading = true;
       errorMessage = null;
     });
     try {
       final results = await getSearchedMovies(query);
+      if (!mounted) return;
       setState(() {
         displayedMovies = results;
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         errorMessage = e.toString();
         isLoading = false;
@@ -70,15 +76,17 @@ class _MoviesPageState extends State<MoviesPage> {
   }
 
   void onSearchChanged(String value) {
+    if (!mounted) return;
     setState(() {
       searchQuery = value;
     });
 
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
       if (value.isEmpty) {
         setState(() {
-          displayedMovies = movies; // back to popular movies
+          displayedMovies = movies;
           errorMessage = null;
         });
         return;
@@ -86,7 +94,6 @@ class _MoviesPageState extends State<MoviesPage> {
       runSearch(value);
     });
   }
-
   void retry() {
     if (searchQuery.isEmpty) {
       loadMovies();
